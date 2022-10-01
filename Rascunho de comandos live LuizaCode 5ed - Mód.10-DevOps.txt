@@ -1,0 +1,172 @@
+########################################
+# no arquivo Procfile
+########################################
+web: uvicorn main:app
+
+
+
+########################################
+# arquivo .env local
+########################################
+JWT_SECRET=secret
+MAIL_USERNAME=
+MAIL_PASSWORD= 
+MAIL_FROM=
+MAIL_SERVER=
+HOST=
+PORT=8000
+IS_SMTP_CONFIG=0
+DATABASE_HOST=mongodb+srv://<login>:<senha>@cluster0.gdck2bo.mongodb.net/?retryWrites=true&w=majority
+EXPIRED_CART=900
+REDIS_URI=redis://localhost:6379
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+
+
+########################################
+# ERRO DE BASE NÃO ENCONTRADA
+########################################
+2022-09-29T16:19:04.477675+00:00 app[web.1]: decouple.UndefinedValueError: DATABASE_HOST not found. Declare it as envvar or define a default value.
+2022-09-29T16:19:29.644037+00:00 heroku[router]: at=error code=H20 desc="App boot timeout" method=GET path="/" host=shopping-cart-soejima.herokuapp.com request_id=77f709f2-9090-405a-b306-9e5e764e4235 fwd="189.19.156.186" dyno= connect= service= status=503 bytes= protocol=https
+2022-09-29T16:20:02.987636+00:00 heroku[web.1]: Error R10 (Boot timeout) -> Web process failed to bind to $PORT within 60 seconds of launch
+2022-09-29T16:20:03.026459+00:00 heroku[web.1]: Stopping process with SIGKILL
+2022-09-29T16:20:03.205046+00:00 heroku[web.1]: Process exited with status 137
+2022-09-29T16:20:03.294480+00:00 heroku[web.1]: State changed from starting to crashed
+2022-09-29T16:20:06.653442+00:00 heroku[router]: at=error code=H10 desc="App crashed" method=GET path="/favicon.ico" host=shopping-cart-soejima.herokuapp.com request_id=c61fc8ed-5d53-48c7-8ec8-ae0709dfc3af fwd="189.19.156.186" dyno= connect= service= status=503 bytes= protocol=https
+
+
+Criar base no Atlas Mongodb.com
+
+https://account.mongodb.com/account/login
+
+https://www.mongodb.com/
+
+
+########################################
+# CLI Heroku
+########################################
+heroku config:set JWT_SECRET='secret' MAIL_USERNAME='' MAIL_PASSWORD='' MAIL_FROM='' MAIL_SERVER='' HOST='' PORT='8000' IS_SMTP_CONFIG='0' DATABASE_HOST='mongodb+srv://<login>:<senha>@cluster0.gdck2bo.mongodb.net/?retryWrites=true&w=majority' EXPIRED_CART='900' REDIS_URI='redis://localhost:6379' REDIS_HOST='localhost' REDIS_PORT='6379'
+
+
+########################################
+# Dockerfile
+########################################
+FROM python:3.10.5-slim
+
+WORKDIR /app
+
+COPY . .
+
+RUN pip install -r requirements.txt
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
+########################################
+# .dockerignore
+########################################
+venv/
+db/
+.vscode/
+__pycache__/
+
+
+
+########################################
+# Build de container Docker
+# -t é de tag, damos um nome para o container para termos condições de identificá-lo
+########################################
+docker build -t shopping-cart-soe .
+
+docker image ls shopping-cart-soe
+
+
+# subindo container da api local
+docker run -p 8000:8000 shopping-cart-soe
+
+# ou para rodar em background:
+docker run -p 8000:8000 -d shopping-cart-soe
+
+## listar processos Docker rodando
+docker ps
+
+# parar processo docker
+docker container stop <container_id>
+
+# subindo container mongo local
+docker run -p 27017:27017 mongo
+
+# container mongo local, em background
+docker run -p 27017:27017 -d mongo
+
+
+########################################
+# ERRO!!!! SE DER RUIM ao rodar o docker run
+# rodei 'docker run -p 27017:27017 mongo'
+# e deu o seguinte ERRO
+# docker: Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Post "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/create": dial unix /var/run/docker.sock: connect: permission denied.
+# See 'docker run --help'.
+
+# é um problema de permissionamento do docker
+# fonte: https://newbedev.com/docker-got-permission-denied-while-trying-to-connect-to-the-docker-daemon-socket-at-unix-var-run-docker-sock-post-http-2fvar-2frun-2fdocker-sock-v1-24-containers-create-dial-unix-var-run-docker-sock-connect-permission-denied-code-example
+########################################
+sudo chmod 666 /var/run/docker.sock
+
+
+
+########################################
+# docker-compose.yml
+########################################
+version: "3"
+
+services:
+  api:
+    build: .
+    ports:
+      - 8000:8000
+    depends_on:
+      - database
+    environment:
+      - DATABASE_HOST=mongodb://database:27017
+  database:
+    image: mongo
+    ports:
+      - 27017:27017
+    volumes:
+      - ./db:/data/db
+
+
+########################################
+# Usando Docker Compose para orquestrar a subida de conteinêres de app e dependências
+########################################
+
+# subir
+docker-compose up
+
+# subir em background liberando o terminal
+docker-compose up -d
+
+# processos do docker-compose que estão up
+docker-compose ps
+
+
+
+
+
+########################################
+# heroku.yml 
+########################################
+build:
+  docker:
+    web: Dockerfile
+run:
+  web: uvicorn main:app --host 0.0.0.0 --port $PORT
+
+
+
+
+########################################
+# Hozania Resolve! Desafios de Docker vs Windows
+########################################
+https://gist.github.com/luizomf/8bc93474de107bff6ee09b1ceee481df 
